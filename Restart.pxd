@@ -1,19 +1,3 @@
-cimport ParallelMPI
-
-cdef class Restart:
-    cdef:
-        public dict restart_data
-        str restart_path
-        str input_path
-        public bint is_restart_run
-        str uuid
-        public double last_restart_time
-        public double frequency
-        bint delete_old
-        list times_retained
-
-    cpdef initialize(self)
-    cpdef write(self, ParallelMPI.ParallelMPI Pa)
-    cpdef read(self, ParallelMPI.ParallelMPI Pa)
-    cpdef free_memory(self)
-    cpdef cleanup(self)
+version https://git-lfs.github.com/spec/v1
+oid sha256:9b80beb2ab1ccad9b538425b653cdcce80f0b43e8c197ebe112b3d4ae8f571dd
+size 486

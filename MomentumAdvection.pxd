@@ -1,14 +1,3 @@
-cimport Grid
-cimport PrognosticVariables
-cimport ParallelMPI
-cimport ReferenceState
-from NetCDFIO cimport NetCDFIO_Stats
-
-cdef class MomentumAdvection:
-    cdef:
-        Py_ssize_t order
-
-    cpdef initialize(self, Grid.Grid Gr, PrognosticVariables.PrognosticVariables PV, NetCDFIO_Stats NS, ParallelMPI.ParallelMPI Pa)
-    cpdef update(self, Grid.Grid Gr, ReferenceState.ReferenceState Rs, PrognosticVariables.PrognosticVariables PV, ParallelMPI.ParallelMPI Pa)
-    cpdef stats_io(self, Grid.Grid Gr, PrognosticVariables.PrognosticVariables PV, NetCDFIO_Stats NS, ParallelMPI.ParallelMPI Pa)
-    cpdef double[:, :, :] get_flux(self, Py_ssize_t i_advected, Py_ssize_t i_advecting, Grid.Grid Gr)
+version https://git-lfs.github.com/spec/v1
+oid sha256:f24a6f9183dff4beb76cc30c92c7db01bb714daa520a999aacd29b75d61d4550
+size 695

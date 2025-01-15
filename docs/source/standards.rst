@@ -1,6 +1,3 @@
-Coding Standards
-================
-
-To aid readability and extensibility as well as to avoid coding errors it is important to establish a set of coding
-standards and best practices. Our standards and practices have evolved as we have developed PyCLES, and so the code does
-not adhere entirely to the standards described here. Nonetheless,
+version https://git-lfs.github.com/spec/v1
+oid sha256:1e119319f6c3a41137b11db1f359a302ceb9da9d94f8048d1f954ce6580bec26
+size 337

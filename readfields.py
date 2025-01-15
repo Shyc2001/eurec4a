@@ -1,32 +1,3 @@
-import os
-import xarray as xr
-
-def load_nc_file(time, number):
-    # Define the path to the NC file
-    file_path = f'./Output.Bomex.4fd96/fields/{time}/{number}.nc'
-
-    # Check if the file exists
-    if not os.path.exists(file_path):
-        print(f"The file {file_path} does not exist.")
-        return None
-
-    # Load and return the NC file content using xarray
-    ds = xr.open_dataset(file_path)
-
-    return ds
-
-def main():
-    # User input for time and number
-    time = input("Enter the time (e.g., 3600): ")
-    number = input("Enter the number (e.g., 0): ")
-
-    # Load the NC file content
-    ds = load_nc_file(time, number)
-
-    # Check if data is loaded successfully
-    if ds is not None:
-        print("NC file content:")
-        print(ds)
-
-if __name__ == "__main__":
-    main()
+version https://git-lfs.github.com/spec/v1
+oid sha256:9571ee98ef6b5314a69ef02fdabe40abb55ad89fd1b545fe01c95e5c630dc4c6
+size 827

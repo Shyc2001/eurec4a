@@ -1,31 +1,3 @@
-cimport Grid
-cimport ReferenceState
-
-cimport ParallelMPI
-cimport TimeStepping
-cimport Radiation
-cimport Surface
-from NetCDFIO cimport NetCDFIO_Stats
-
-
-cdef class SurfaceBudgetNone:
-
-    cpdef initialize(self, Grid.Grid Gr, NetCDFIO_Stats NS, ParallelMPI.ParallelMPI Pa)
-    cpdef update(self, Grid.Grid Gr, Radiation.RadiationBase Ra, Surface.SurfaceBase Sur, TimeStepping.TimeStepping TS, ParallelMPI.ParallelMPI Pa)
-    cpdef stats_io(self, Surface.SurfaceBase Sur, NetCDFIO_Stats NS, ParallelMPI.ParallelMPI Pa)
-
-
-cdef class SurfaceBudget:
-    cdef:
-        bint constant_sst
-        double ocean_heat_flux
-        double water_depth_initial
-        double water_depth_final
-        double water_depth_time
-        double fixed_sst_time
-        double water_depth
-
-
-    cpdef initialize(self, Grid.Grid Gr, NetCDFIO_Stats NS, ParallelMPI.ParallelMPI Pa)
-    cpdef update(self, Grid.Grid Gr, Radiation.RadiationBase Ra, Surface.SurfaceBase Sur, TimeStepping.TimeStepping TS, ParallelMPI.ParallelMPI Pa)
-    cpdef stats_io(self, Surface.SurfaceBase Sur, NetCDFIO_Stats NS, ParallelMPI.ParallelMPI Pa)
+version https://git-lfs.github.com/spec/v1
+oid sha256:c783c13180048a0ca52bfb7968a012cbdef65ffbda7c994b008dcfd767da7f55
+size 1102

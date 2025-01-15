@@ -1,21 +1,3 @@
-cimport Grid
-cimport PrognosticVariables
-cimport ParallelMPI
-cimport ReferenceState
-cimport DiagnosticVariables
-cimport TimeStepping
-from NetCDFIO cimport NetCDFIO_Stats
-from Thermodynamics cimport LatentHeat
-
-cdef class ScalarAdvection:
-
-    cdef:
-        double [:] flux
-        Py_ssize_t order
-        Py_ssize_t order_sedimentation
-        double (*L_fp)(double T, double Lambda) nogil
-        double (*Lambda_fp)(double T) nogil
-
-    cpdef initialize(self,Grid.Grid Gr, PrognosticVariables.PrognosticVariables PV, NetCDFIO_Stats NS, ParallelMPI.ParallelMPI Pa)
-    cpdef update(self, Grid.Grid Gr, ReferenceState.ReferenceState Rs,PrognosticVariables.PrognosticVariables PV,  DiagnosticVariables.DiagnosticVariables DV, ParallelMPI.ParallelMPI Pa)
-    cpdef stats_io(self, Grid.Grid Gr, ReferenceState.ReferenceState RS, PrognosticVariables.PrognosticVariables PV, NetCDFIO_Stats NS, ParallelMPI.ParallelMPI Pa)
+version https://git-lfs.github.com/spec/v1
+oid sha256:c41bba31435fdcd57706bac5fec73d942c9783fc26c78958010e53216e7ca0f8
+size 917

@@ -1,6 +1,3 @@
-Introduction
-============
-
-PyCLES documentation is a work in progress. Initially, we will detail obtaining and installing PyCLES. Eventually,
-we anticipate providing detailed documentation of all classes and methods in PyCLES. Obviously this will take some time.
-We hope to make short work of it!
+version https://git-lfs.github.com/spec/v1
+oid sha256:faf8a1a824b978c4d8bab5970af02060c3148f00fad0198577a8408685866fce
+size 303

@@ -1,21 +1,3 @@
-.DS_Store
-*.pkl
-*.pyc
-*.so
-*.o
-*.c
-parameters.pxi
-parameters_micro.pxi
-Csrc/parameters.h
-Csrc/parameters_micro.h
-*.idea
-*.in
-build/
-*.txt
-figs/
-_static/
-_templates/
-*.png
-*.mod
-Output.*
-*.json
+version https://git-lfs.github.com/spec/v1
+oid sha256:5ec0b9480c1e72777c8481430126a56cbee7476c81e5f62b983a2e065a0a900c
+size 193

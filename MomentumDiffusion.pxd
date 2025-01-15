@@ -1,18 +1,3 @@
-cimport Grid
-cimport ReferenceState
-cimport PrognosticVariables
-cimport DiagnosticVariables
-cimport Kinematics
-cimport ParallelMPI
-from NetCDFIO cimport NetCDFIO_Stats
-
-cdef class MomentumDiffusion:
-    cdef:
-        double[:] flux
-        Py_ssize_t n_fluxes
-    cpdef initialize(self, Grid.Grid Gr, PrognosticVariables.PrognosticVariables PV,
-                     DiagnosticVariables.DiagnosticVariables DV,  NetCDFIO_Stats NS, ParallelMPI.ParallelMPI Pa)
-    cpdef update(self, Grid.Grid Gr, ReferenceState.ReferenceState Rs, PrognosticVariables.PrognosticVariables PV,
-                 DiagnosticVariables.DiagnosticVariables DV, Kinematics.Kinematics Ke)
-    cpdef stats_io(self,Grid.Grid Gr, PrognosticVariables.PrognosticVariables PV,
-                   DiagnosticVariables.DiagnosticVariables DV, Kinematics.Kinematics Ke, NetCDFIO_Stats NS, ParallelMPI.ParallelMPI Pa)
+version https://git-lfs.github.com/spec/v1
+oid sha256:8b32b6cdfb6d4a832796e86d3ffedab5c3dbd80bd70958cf88dccf4098c2c157
+size 878

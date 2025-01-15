@@ -1,19 +1,3 @@
-cdef extern from "thermodynamic_functions.h":
-    double theta_c(const double p0, const double T) nogil
-    double thetali_c(const double p0, const double T, const double qt, const double ql, const double qi, const double L) nogil
-    double exner_c(const double p0) nogil
-    double pd_c(const double p0, const double qt, const double qv) nogil
-    double pv_c(const double p0, const double qt, const double qv) nogil
-    double density_temperature_c(const double T, const double qt, const double qv) nogil
-    double theta_rho_c(const double p0, const double T, const double qt, const double qv) nogil
-    double cpm_c(const double qt) nogil
-    double thetas_c(const double s, const double qt) nogil
-    double thetas_t_c(const double p0, const double T, const double qt, const double qv,
-                            const double qc, const double L) nogil
-    double entropy_from_thetas_c(const double thetas, const double qt) nogil
-    double buoyancy_c(const double alpha0, const double alpha) nogil
-    double alpha_c(const double p0, const double T, const double qt, const double qv) nogil
-    double qv_star_c(const double p0, const double qt, const double pv) nogil
-    double saturation_vapor_pressure_water(const double temperature) nogil
-    double saturation_vapor_pressure_water_simple(const double temperature) nogil
-    double saturation_vapor_pressure_ice(const double temperature) nogil
+version https://git-lfs.github.com/spec/v1
+oid sha256:bff57631f7a8ab645822c0bf5c2ec4d09a5a8a0b789120084c912f7df3d79963
+size 1405

@@ -1,28 +1,3 @@
-      module rrsw_ref
-
-      use parkind, only : im => kind_im, rb => kind_rb
-
-      implicit none
-      save
-
-!------------------------------------------------------------------
-! rrtmg_sw reference atmosphere 
-! Based on standard mid-latitude summer profile
-!
-! Initial version:  JJMorcrette, ECMWF, jul1998
-! Revised: MJIacono, AER, jun2006
-! Revised: MJIacono, AER, aug2008
-!------------------------------------------------------------------
-
-!  name     type     purpose
-! -----  :  ----   : ----------------------------------------------
-! pref   :  real   : Reference pressure levels
-! preflog:  real   : Reference pressure levels, ln(pref)
-! tref   :  real   : Reference temperature levels for MLS profile
-!------------------------------------------------------------------
-
-      real(kind=rb) , dimension(59) :: pref
-      real(kind=rb) , dimension(59) :: preflog
-      real(kind=rb) , dimension(59) :: tref
-
-      end module rrsw_ref
+version https://git-lfs.github.com/spec/v1
+oid sha256:d5db0b341c66fe13d75aaa5a81ccd06332d408ec447ca4374ab9c81030a6f70a
+size 945

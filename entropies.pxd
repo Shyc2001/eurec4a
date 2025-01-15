@@ -1,6 +1,3 @@
-cdef extern from "entropies.h":
-    double sd_c(double pd, double T) nogil
-    double sv_c(double pv, double T) nogil
-    double sc_c(double L, double T) nogil
-    double s_tendency_c(double p0, double qt, double qv, double T,
-                               double qt_tendency, double T_tendency) nogil
+version https://git-lfs.github.com/spec/v1
+oid sha256:6c38d2973660e54dc513318c4a8552c8644de1cb57e70fc3f76584d19fa27319
+size 303

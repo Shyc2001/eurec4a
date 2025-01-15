@@ -1,30 +1,3 @@
-      module parkind
-
-      implicit none
-      save
-
-!------------------------------------------------------------------
-! rrtmg kinds
-! Define integer and real kinds for various types.
-!
-! Initial version: MJIacono, AER, jun2006
-! Revised: MJIacono, AER, aug2008
-!------------------------------------------------------------------
-
-!
-!     integer kinds
-!     -------------
-!
-      integer, parameter :: kind_ib = selected_int_kind(13)  ! 8 byte integer
-      integer, parameter :: kind_im = selected_int_kind(6)   ! 4 byte integer
-      integer, parameter :: kind_in = kind(1)                ! native integer
-
-!
-!     real kinds
-!     ----------
-!
-      integer, parameter :: kind_rb = selected_real_kind(12) ! 8 byte real
-      integer, parameter :: kind_rm = selected_real_kind(6)  ! 4 byte real
-      integer, parameter :: kind_rn = kind(1.0)              ! native real
-
-      end module parkind
+version https://git-lfs.github.com/spec/v1
+oid sha256:99a24dd473ac44c6c7b1a0461a6784705e9d6f804ff9877fda42a0f502ae278c
+size 902

@@ -1,17 +1,3 @@
-from distutils.core import setup
-from Cython.Build import cythonize
-from distutils.extension import Extension
-
-extensions = []
-extra_compile_args = []
-# ,'-Rpass=loop-vectorize']
-extra_compile_args += ['-O3', '-march=native', '-Wno-unused', '-Wno-#warnings']
-
-_ext = Extension("combine3d", ["combine3d.pyx"],
-                 extra_compile_args=extra_compile_args)
-extensions.append(_ext)
-
-
-setup(
-    ext_modules=cythonize(extensions, verbose=1)
-)
+version https://git-lfs.github.com/spec/v1
+oid sha256:039eb5c4fc4f298b181dd36ae6c28028327b17430a0fc1cc060841e6226291b0
+size 449
