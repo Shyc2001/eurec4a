@@ -1,3 +1,4 @@
+
 #!python
 #cython: boundscheck=False
 #cython: wraparound=False
@@ -494,8 +495,8 @@ cdef class ForcingDyCOMS_RF01:
 
 cdef class ForcingRico:
     def __init__(self, namelist):
-        latitude = 13.3  # degrees
-        self.coriolis_param = 2.0 * omega * sin(latitude * pi / 180.0)
+        latitude = 18.0 # degrees
+        self.coriolis_param = 2.0 * omega * sin(latitude * pi / 180.0 )
         self.momentum_subsidence = 0
         
         # isotope tracer type
@@ -512,48 +513,30 @@ cdef class ForcingRico:
     cpdef initialize(self, Grid.Grid Gr, ReferenceState.ReferenceState RS, Th, NetCDFIO_Stats NS, ParallelMPI.ParallelMPI Pa):
         cdef Py_ssize_t k
 
-        # 申请 C 兼容数组
-        self.subsidence = np.empty(Gr.dims.nlg[2], dtype=np.double, order='c')
-        self.ug = np.empty(Gr.dims.nlg[2], dtype=np.double, order='c')
-        self.vg = np.empty(Gr.dims.nlg[2], dtype=np.double, order='c')
-        self.dtdt = np.empty(Gr.dims.nlg[2], dtype=np.double, order='c')
-        self.dqtdt = np.empty(Gr.dims.nlg[2], dtype=np.double, order='c')
+        self.subsidence = np.empty((Gr.dims.nlg[2]),dtype=np.double, order='c')
+        self.ug = np.empty(Gr.dims.nlg[2],dtype=np.double,order='c')
+        self.vg = np.empty(Gr.dims.nlg[2],dtype=np.double,order='c')
+        self.dtdt = np.ones(Gr.dims.nlg[2],dtype=np.double,order='c') * -2.5/86400.0 #Here this is theta forcing
+        self.dqtdt = np.zeros(Gr.dims.nlg[2],dtype=np.double,order='c')
 
-        # 读取 NetCDF 文件
-        file_path = "./CGILSdata/processed_era5.nc"
-        data = nc.Dataset(file_path, "r")
+        # Convert given theta forcing to temperature forcing
+        with nogil:
+            for k in range(Gr.dims.nlg[2]):
+                self.dtdt[k] = self.dtdt[k] * exner_c(RS.p0_half[k])
+                if Gr.zl_half[k] <= 2260.0:
+                    self.subsidence[k] = -(0.005/2260.0) * Gr.zl_half[k]
+                else:
+                    self.subsidence[k] = -0.005
+                if Gr.zl_half[k]<=2980.0:
+                    self.dqtdt[k] = (-1.0 + 1.3456/2980.0 * Gr.zl_half[k])/86400.0/1000.0
+                else:
+                    self.dqtdt[k] = 0.3456/86400.0/1000.0
+                self.ug[k] = -9.9 + 2.0e-3 * Gr.zl_half[k]
+                self.vg[k] = -3.8
 
-        # 读取 ERA5 数据（确保 `time=1`）
-        z_levels = np.array(data.variables["z"][:], dtype=np.double)  # ERA5 z 方向坐标
-        theta_tendency_data = np.array(data.variables["dtthl_advec"][1, :], dtype=np.double)  # time=1
-        q_tendency_data = np.array(data.variables["dtqt_advec"][1, :], dtype=np.double)
-        geostrophic_u_data = np.array(data.variables["ug"][1, :], dtype=np.double)
-        geostrophic_v_data = np.array(data.variables["vg"][1, :], dtype=np.double)
-        subsidence_data = np.array(data.variables["wls"][1, :], dtype=np.double)
-        data.close()
 
-        # 目标模式层高度
-        new_z_levels = Gr.zl_half[:Gr.dims.nlg[2]]
-
-        # **进行插值**
-        theta_tendency_interp = np.interp(new_z_levels, z_levels, theta_tendency_data)
-        q_tendency_interp = np.interp(new_z_levels, z_levels, q_tendency_data)
-        geostrophic_u_interp = np.interp(new_z_levels, z_levels, geostrophic_u_data)
-        geostrophic_v_interp = np.interp(new_z_levels, z_levels, geostrophic_v_data)
-        subsidence_w_interp = np.interp(new_z_levels, z_levels, subsidence_data)
-
-        # **赋值到 ForcingRico 变量**
-
-        for k in range(Gr.dims.nlg[2]):
-            self.dtdt[k] = theta_tendency_interp[k] * exner_c(RS.p0_half[k])  # 确保单位一致
-            self.dqtdt[k] = q_tendency_interp[k]  # 直接使用 ERA5 的比湿趋势
-            self.ug[k] = geostrophic_u_interp[k]  # 地转风 U
-            self.vg[k] = geostrophic_v_interp[k]  # 地转风 V
-            self.subsidence[k] = subsidence_w_interp[k]  # 沉降速度
-        
-        # **注册 NetCDF 输出变量**
         NS.add_profile('u_coriolis_tendency', Gr, Pa)
-        NS.add_profile('v_coriolis_tendency', Gr, Pa)
+        NS.add_profile('v_coriolis_tendency',Gr, Pa)
         NS.add_profile('s_subsidence_tendency', Gr, Pa)
         NS.add_profile('qt_subsidence_tendency', Gr, Pa)
         if self.momentum_subsidence == 1:
@@ -607,7 +590,7 @@ cdef class ForcingRico:
                         PV.tendencies[qt_shift + ijk] += self.dqtdt[k]
 
         coriolis_force(&Gr.dims,&PV.values[u_shift],&PV.values[v_shift],&PV.tendencies[u_shift],
-                                   &PV.tendencies[v_shift],&self.ug[0], &self.vg[0],self.coriolis_param, RS.u0, RS.v0)
+                                   &PV.tendencies[v_shift],&self.ug[0], &self.vg[0],self.coriolis_param, RS.u0, RS.v0  )
 
         # Add Focing for tracers: std+iso
         cdef:
@@ -2251,7 +2234,7 @@ cdef extern from "entropies.h":
 cdef class AdjustedMoistAdiabat:
     def __init__(self,namelist,  LatentHeat LH, ParallelMPI.ParallelMPI Pa ):
 
-    
+
         self.L_fp = LH.L_fp
         self.Lambda_fp = LH.Lambda_fp
         self.CC = ClausiusClapeyron()
@@ -2537,4 +2520,3 @@ cpdef iso_forcing(Grid.Grid Gr, ReferenceState.ReferenceState Ref, PrognosticVar
                     PV.tendencies[qt_std_shift + ijk] += (qt_tend_forcing[k])
                     PV.tendencies[qt_O18_shift + ijk] += (qt_tend_forcing[k])* iso_ratio_O18
                     PV.tendencies[qt_HDO_shift + ijk] += (qt_tend_forcing[k])* iso_ratio_HDO
-
