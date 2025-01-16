@@ -792,76 +792,76 @@ def InitSmoke(namelist,Grid.Grid Gr,PrognosticVariables.PrognosticVariables PV,
 
     return
 
-def InitRico(namelist,Grid.Grid Gr,PrognosticVariables.PrognosticVariables PV,
-                       ReferenceState.ReferenceState RS, Th, NetCDFIO_Stats NS, ParallelMPI.ParallelMPI Pa, LatentHeat LH ):
+def InitRico(namelist, Grid.Grid Gr, PrognosticVariables.PrognosticVariables PV,
+               ReferenceState.ReferenceState RS, Th, NetCDFIO_Stats NS, ParallelMPI.ParallelMPI Pa, LatentHeat LH):
 
+    # 读取初始条件的 NetCDF 文件
+    file_path = "./CGILSdata/initial_conditions_eurec4a.nc"
+    data = nc.Dataset(file_path, "r")
+    
+    # 读取 time=1 的数据
+    z_levels = np.array(data.variables["z"][:], dtype=np.double)  # 高度坐标
+    theta_init_data = np.array(data.variables["thl"][:], dtype=np.double)  # 位温
+    qt_init_data = np.array(data.variables["qt"][:], dtype=np.double)  # 总水混合比
+    u_init_data = np.array(data.variables["u"][:], dtype=np.double)  # 风速 U
+    v_init_data = np.array(data.variables["v"][:], dtype=np.double)  # 风速 V
+    p_init_data = np.array(data.variables["p"][:], dtype=np.double)  # 压力
+    data.close()
 
-    #First generate the reference profiles
-    RS.Pg = 1.0154e5  #Pressure at ground
-    RS.Tg = 299.8  #Temperature at ground
+    # 目标模式层高度
+    new_z_levels = Gr.zl_half[:Gr.dims.nlg[2]]
+
+    # **进行插值**
+    theta_init_interp = np.interp(new_z_levels, z_levels, theta_init_data)
+    qt_init_interp = np.interp(new_z_levels, z_levels, qt_init_data)
+    u_init_interp = np.interp(new_z_levels, z_levels, u_init_data)
+    v_init_interp = np.interp(new_z_levels, z_levels, v_init_data)
+    p_init_interp = np.interp(new_z_levels, z_levels, p_init_data)
+
+    # **获取最接近地面的值（用于设置地面条件）**
+    surface_index = 0  # 取 ERA5 中最接近地面的层
+    RS.Pg = 1.017e5
+    RS.Tg = 300.1
     pvg = Th.get_pv_star(RS.Tg)
-    RS.qtg = eps_v * pvg/(RS.Pg - pvg)   #Total water mixing ratio at surface = qsat
+    RS.qtg = eps_v * pvg/(RS.Pg - pvg)
 
     RS.initialize(Gr, Th, NS, Pa)
 
-    #Get the variable number for each of the velocity components
-    np.random.seed(Pa.rank)
+    # 获取变量索引
     cdef:
-        Py_ssize_t u_varshift = PV.get_varshift(Gr,'u')
-        Py_ssize_t v_varshift = PV.get_varshift(Gr,'v')
-        Py_ssize_t w_varshift = PV.get_varshift(Gr,'w')
-        Py_ssize_t s_varshift = PV.get_varshift(Gr,'s')
-        Py_ssize_t qt_varshift = PV.get_varshift(Gr,'qt')
-        Py_ssize_t i,j,k
-        Py_ssize_t ishift, jshift
-        Py_ssize_t ijk, e_varshift
-        double temp
-        double qt_
-        double [:] theta = np.empty((Gr.dims.nlg[2]),dtype=np.double,order='c')
-        double [:] qt = np.empty((Gr.dims.nlg[2]),dtype=np.double,order='c')
-        double [:] u = np.empty((Gr.dims.nlg[2]),dtype=np.double,order='c')
-        double [:] v = np.empty((Gr.dims.nlg[2]),dtype=np.double,order='c')
-        Py_ssize_t count
+        Py_ssize_t u_varshift = PV.get_varshift(Gr, 'u')
+        Py_ssize_t v_varshift = PV.get_varshift(Gr, 'v')
+        Py_ssize_t w_varshift = PV.get_varshift(Gr, 'w')
+        Py_ssize_t s_varshift = PV.get_varshift(Gr, 's')
+        Py_ssize_t qt_varshift = PV.get_varshift(Gr, 'qt')
+        Py_ssize_t i, j, k, ishift, jshift, ijk, e_varshift
+        double temp, qt_
+        double [:] theta = np.empty(Gr.dims.nlg[2], dtype=np.double, order='c')
+        double [:] qt = np.empty(Gr.dims.nlg[2], dtype=np.double, order='c')
+        double [:] u = np.empty(Gr.dims.nlg[2], dtype=np.double, order='c')
+        double [:] v = np.empty(Gr.dims.nlg[2], dtype=np.double, order='c')
 
-        theta_pert = (np.random.random_sample(Gr.dims.npg )-0.5)*0.1
-        qt_pert = (np.random.random_sample(Gr.dims.npg )-0.5) * 2.5e-5
+    # **生成随机扰动**
+    np.random.seed(Pa.rank)
+    theta_pert = (np.random.random_sample(Gr.dims.npg) - 0.5) * 0.1
+    qt_pert = (np.random.random_sample(Gr.dims.npg) - 0.5) * 2.5e-5
+
+    # 直接使用插值后的数据
 
     for k in xrange(Gr.dims.nlg[2]):
+        theta[k] = theta_init_interp[k]
+        qt[k] = qt_init_interp[k]
+        u[k] = u_init_interp[k]
+        v[k] = v_init_interp[k]
 
-        #Set Thetal profile
-        if Gr.zl_half[k] <= 740.0:
-            theta[k] = 297.9
-        else:
-            theta[k] = 297.9 + (317.0-297.9)/(4000.0-740.0)*(Gr.zl_half[k] - 740.0)
-
-
-        #Set qt profile
-        if Gr.zl_half[k] <= 740.0:
-            qt[k] =  16.0 + (13.8 - 16.0)/740.0 * Gr.zl_half[k]
-        elif Gr.zl_half[k] > 740.0 and Gr.zl_half[k] <= 3260.0:
-            qt[k] = 13.8 + (2.4 - 13.8)/(3260.0-740.0) * (Gr.zl_half[k] - 740.0)
-        else:
-            qt[k] = 2.4 + (1.8-2.4)/(4000.0-3260.0)*(Gr.zl_half[k] - 3260.0)
-
-
-        #Change units to kg/kg
-        qt[k]/= 1000.0
-
-        #Set u profile
-        u[k] = -9.9 + 2.0e-3 * Gr.zl_half[k]
-        #set v profile
-        v[k] = -3.8
-    #Set velocities for Galilean transformation
+    # **设置 Galilean transformation 速度**
+    RS.u0 = 0.5 * (np.amax(u) + np.amin(u))
     RS.v0 = -3.8
-    RS.u0 = 0.5 * (np.amax(u)+np.amin(u))
 
-
-
-    #Now loop and set the initial condition
-    #First set the velocities
+    # **循环并设置初始条件**
     count = 0
     for i in xrange(Gr.dims.nlg[0]):
-        ishift =  i * Gr.dims.nlg[1] * Gr.dims.nlg[2]
+        ishift = i * Gr.dims.nlg[1] * Gr.dims.nlg[2]
         for j in xrange(Gr.dims.nlg[1]):
             jshift = j * Gr.dims.nlg[2]
             for k in xrange(Gr.dims.nlg[2]):
@@ -869,28 +869,31 @@ def InitRico(namelist,Grid.Grid Gr,PrognosticVariables.PrognosticVariables PV,
                 PV.values[u_varshift + ijk] = u[k] - RS.u0
                 PV.values[v_varshift + ijk] = v[k] - RS.v0
                 PV.values[w_varshift + ijk] = 0.0
-                if Gr.zl_half[k] <= 740.0:
-                    temp = (theta[k] + (theta_pert[count])) * exner_c(RS.p0_half[k])
-                    qt_ = qt[k]+qt_pert[count]
-                else:
-                    temp = (theta[k]) * exner_c(RS.p0_half[k])
+                
+                if k <= surface_index:  # 低层加随机扰动
+                    temp = (theta[k] + theta_pert[count]) * exner_c(RS.p0_half[k])
+                    qt_ = qt[k] + qt_pert[count]
+                else:  # 高层不加扰动
+                    temp = theta[k] * exner_c(RS.p0_half[k])
                     qt_ = qt[k]
-                PV.values[s_varshift + ijk] = Th.entropy(RS.p0_half[k],temp,qt_,0.0,0.0)
+
+                PV.values[s_varshift + ijk] = Th.entropy(RS.p0_half[k], temp, qt_, 0.0, 0.0)
                 PV.values[qt_varshift + ijk] = qt_
                 count += 1
 
+    # **如果 `e` 变量存在，初始化它**
     if 'e' in PV.name_index:
         e_varshift = PV.get_varshift(Gr, 'e')
         for i in xrange(Gr.dims.nlg[0]):
-            ishift =  i * Gr.dims.nlg[1] * Gr.dims.nlg[2]
+            ishift = i * Gr.dims.nlg[1] * Gr.dims.nlg[2]
             for j in xrange(Gr.dims.nlg[1]):
                 jshift = j * Gr.dims.nlg[2]
                 for k in xrange(Gr.dims.nlg[2]):
                     ijk = ishift + jshift + k
-                    if Gr.zl_half[k] <= 740.0:
+                    if k <= surface_index:
                         PV.values[e_varshift + ijk] = 0.1
 
-    # initialize r_vapor profile using rayleigh approach, based on equation 66 in Wei 2018
+    # **初始化 Rayleigh 湿气剖面（用于同位素模拟）**
     try:
         isotope_tracers = namelist["isotopetracers"]["use_tracers"]
         if isotope_tracers:
