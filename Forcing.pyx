@@ -526,11 +526,11 @@ cdef class ForcingRico:
 
         # 读取 ERA5 数据（确保 `time=1`）
         z_levels = np.array(data.variables["z"][:], dtype=np.double)  # ERA5 z 方向坐标
-        theta_tendency_data = np.array(data.variables["dtthl_advec"][1, :], dtype=np.double)  # time=1
-        q_tendency_data = np.array(data.variables["dtqt_advec"][1, :], dtype=np.double)
-        geostrophic_u_data = np.array(data.variables["ug"][1, :], dtype=np.double)
-        geostrophic_v_data = np.array(data.variables["vg"][1, :], dtype=np.double)
-        subsidence_data = np.array(data.variables["wls"][1, :], dtype=np.double)
+        theta_tendency_data = np.array(data.variables["dtthl_advec"][4, :], dtype=np.double)  # time=1
+        q_tendency_data = np.array(data.variables["dtqt_advec"][4, :], dtype=np.double)
+        geostrophic_u_data = np.array(data.variables["ug"][4, :], dtype=np.double)
+        geostrophic_v_data = np.array(data.variables["vg"][4, :], dtype=np.double)
+        subsidence_data = np.array(data.variables["wls"][4, :], dtype=np.double)
         data.close()
 
         # 目标模式层高度

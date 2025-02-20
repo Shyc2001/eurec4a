@@ -796,16 +796,16 @@ def InitRico(namelist, Grid.Grid Gr, PrognosticVariables.PrognosticVariables PV,
                ReferenceState.ReferenceState RS, Th, NetCDFIO_Stats NS, ParallelMPI.ParallelMPI Pa, LatentHeat LH):
 
     # 读取初始条件的 NetCDF 文件
-    file_path = "./CGILSdata/initial_conditions_eurec4a.nc"
+    file_path = "./CGILSdata/initial_conditions_eurec4a_new.nc"
     data = nc.Dataset(file_path, "r")
     
-    # 读取 time=1 的数据
+    # 读取 time=5 的数据
     z_levels = np.array(data.variables["z"][:], dtype=np.double)  # 高度坐标
-    theta_init_data = np.array(data.variables["thl"][:], dtype=np.double)  # 位温
-    qt_init_data = np.array(data.variables["qt"][:], dtype=np.double)  # 总水混合比
-    u_init_data = np.array(data.variables["u"][:], dtype=np.double)  # 风速 U
-    v_init_data = np.array(data.variables["v"][:], dtype=np.double)  # 风速 V
-    p_init_data = np.array(data.variables["p"][:], dtype=np.double)  # 压力
+    theta_init_data = np.array(data.variables["thl"][4, :], dtype=np.double)  # 位温
+    qt_init_data = np.array(data.variables["qt"][4, :], dtype=np.double)  # 总水混合比
+    u_init_data = np.array(data.variables["u"][4, :], dtype=np.double)  # 风速 U
+    v_init_data = np.array(data.variables["v"][4, :], dtype=np.double)  # 风速 V
+    p_init_data = np.array(data.variables["p"][4, :], dtype=np.double)  # 压力
     data.close()
 
     # 目标模式层高度
@@ -821,7 +821,7 @@ def InitRico(namelist, Grid.Grid Gr, PrognosticVariables.PrognosticVariables PV,
     # **获取最接近地面的值（用于设置地面条件）**
     surface_index = 0  # 取 ERA5 中最接近地面的层
     RS.Pg = 1.017e5
-    RS.Tg = 300.1
+    RS.Tg = 298.6
     pvg = Th.get_pv_star(RS.Tg)
     RS.qtg = eps_v * pvg/(RS.Pg - pvg)
 
@@ -836,10 +836,10 @@ def InitRico(namelist, Grid.Grid Gr, PrognosticVariables.PrognosticVariables PV,
         Py_ssize_t qt_varshift = PV.get_varshift(Gr, 'qt')
         Py_ssize_t i, j, k, ishift, jshift, ijk, e_varshift
         double temp, qt_
-        double [:] theta = np.empty(Gr.dims.nlg[2], dtype=np.double, order='c')
-        double [:] qt = np.empty(Gr.dims.nlg[2], dtype=np.double, order='c')
-        double [:] u = np.empty(Gr.dims.nlg[2], dtype=np.double, order='c')
-        double [:] v = np.empty(Gr.dims.nlg[2], dtype=np.double, order='c')
+        double [:] theta = np.zeros(Gr.dims.nlg[2], dtype=np.double, order='c')
+        double [:] qt = np.zeros(Gr.dims.nlg[2], dtype=np.double, order='c')
+        double [:] u = np.zeros(Gr.dims.nlg[2], dtype=np.double, order='c')
+        double [:] v = np.zeros(Gr.dims.nlg[2], dtype=np.double, order='c')
 
     # **生成随机扰动**
     np.random.seed(Pa.rank)
@@ -856,7 +856,7 @@ def InitRico(namelist, Grid.Grid Gr, PrognosticVariables.PrognosticVariables PV,
 
     # **设置 Galilean transformation 速度**
     RS.u0 = 0.5 * (np.amax(u) + np.amin(u))
-    RS.v0 = -3.8
+    RS.v0 = 0.5 * (np.amax(v) + np.amin(v))
 
     # **循环并设置初始条件**
     count = 0
@@ -871,13 +871,16 @@ def InitRico(namelist, Grid.Grid Gr, PrognosticVariables.PrognosticVariables PV,
                 PV.values[w_varshift + ijk] = 0.0
                 
                 if k <= surface_index:  # 低层加随机扰动
-                    temp = (theta[k] + theta_pert[count]) * exner_c(RS.p0_half[k])
+                    #temp = (theta[k] + theta_pert[count]) * exner_c(RS.p0_half[k])
+                    temp = theta[k] + theta_pert[count]
                     qt_ = qt[k] + qt_pert[count]
                 else:  # 高层不加扰动
-                    temp = theta[k] * exner_c(RS.p0_half[k])
+                    #temp = theta[k] * exner_c(RS.p0_half[k])
+                    temp = theta[k]
                     qt_ = qt[k]
-
-                PV.values[s_varshift + ijk] = Th.entropy(RS.p0_half[k], temp, qt_, 0.0, 0.0)
+                
+                T,ql = sat_adjst(RS.p0_half[k], temp, qt_, Th)
+                PV.values[s_varshift + ijk] = Th.entropy(RS.p0_half[k], T, qt_, ql, 0.0)
                 PV.values[qt_varshift + ijk] = qt_
                 count += 1
 
