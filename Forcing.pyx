@@ -508,18 +508,31 @@ cdef class ForcingRico:
         except:
             self.isotope_tracers = False
 
+
         return
 
     cpdef initialize(self, Grid.Grid Gr, ReferenceState.ReferenceState RS, Th, NetCDFIO_Stats NS, ParallelMPI.ParallelMPI Pa):
-        cdef Py_ssize_t k
-
+        #cdef Py_ssize_t k
         # 申请 C 兼容数组
-        self.subsidence = np.empty(Gr.dims.nlg[2], dtype=np.double, order='c')
-        self.ug = np.empty(Gr.dims.nlg[2], dtype=np.double, order='c')
-        self.vg = np.empty(Gr.dims.nlg[2], dtype=np.double, order='c')
-        self.dtdt = np.empty(Gr.dims.nlg[2], dtype=np.double, order='c')
-        self.dqtdt = np.empty(Gr.dims.nlg[2], dtype=np.double, order='c')
+        self.subsidence = np.zeros(Gr.dims.nlg[2], dtype=np.double, order='c')
+        self.ug = np.zeros(Gr.dims.nlg[2], dtype=np.double, order='c')
+        self.vg = np.zeros(Gr.dims.nlg[2], dtype=np.double, order='c')
+        self.dtdt = np.zeros(Gr.dims.nlg[2], dtype=np.double, order='c')
+        self.dqtdt = np.zeros(Gr.dims.nlg[2], dtype=np.double, order='c')
+        self.nudge_coeff_velocities = np.zeros(Gr.dims.nlg[2],dtype=np.double,order='c')
+        self.nudge_coeff_scalars = np.zeros(Gr.dims.nlg[2],dtype=np.double,order='c')
+        self.initial_u = np.zeros(Gr.dims.nlg[2],dtype=np.double,order='c')
+        self.initial_v = np.zeros(Gr.dims.nlg[2],dtype=np.double,order='c')
+        self.initial_qt = np.zeros(Gr.dims.nlg[2],dtype=np.double,order='c')
+        self.initial_entropy = np.zeros(Gr.dims.nlg[2],dtype=np.double,order='c')
 
+        
+        cdef:
+            Py_ssize_t k
+            double [:] thetal = np.zeros(Gr.dims.nlg[2],dtype=np.double,order='c')
+            double T, ql
+        
+            
         # 读取 NetCDF 文件
         file_path = "./CGILSdata/processed_era5.nc"
         data = nc.Dataset(file_path, "r")
@@ -531,6 +544,9 @@ cdef class ForcingRico:
         geostrophic_u_data = np.array(data.variables["ug"][4, :], dtype=np.double)
         geostrophic_v_data = np.array(data.variables["vg"][4, :], dtype=np.double)
         subsidence_data = np.array(data.variables["wls"][4, :], dtype=np.double)
+        pressure_data = np.array(data.variables["p"][4, :], dtype=np.double)
+        theta_l_data = np.array(data.variables["thl"][4, :], dtype=np.double)  # 最后一个时间步的温位数据
+        qt_data = np.array(data.variables["qt"][4, :], dtype=np.double)  # 总比湿
         data.close()
 
         # 目标模式层高度
@@ -542,6 +558,9 @@ cdef class ForcingRico:
         geostrophic_u_interp = np.interp(new_z_levels, z_levels, geostrophic_u_data)
         geostrophic_v_interp = np.interp(new_z_levels, z_levels, geostrophic_v_data)
         subsidence_w_interp = np.interp(new_z_levels, z_levels, subsidence_data)
+        p_interp = np.interp(new_z_levels, z_levels, pressure_data)
+        theta_l_interp = np.interp(new_z_levels, z_levels, theta_l_data)
+        qt_interp = np.interp(new_z_levels, z_levels, qt_data)
 
         # **赋值到 ForcingRico 变量**
 
@@ -551,6 +570,32 @@ cdef class ForcingRico:
             self.ug[k] = geostrophic_u_interp[k]  # 地转风 U
             self.vg[k] = geostrophic_v_interp[k]  # 地转风 V
             self.subsidence[k] = subsidence_w_interp[k]  # 沉降速度
+        
+        
+        for k in range(Gr.dims.nlg[2]):
+            thetal[k] = theta_l_interp[k]  # 直接赋值插值后的 thetal
+            self.initial_qt[k] = qt_interp[k]  # 直接赋值插值后的 qt
+
+            # Set velocity profile
+            self.initial_v[k] = geostrophic_v_interp[k]
+            self.initial_u[k] = geostrophic_u_interp[k]
+
+            # Now get entropy profile
+            T, ql = sat_adjst(p_interp[k], thetal[k], self.initial_qt[k], Th)
+            self.initial_entropy[k] = Th.entropy(p_interp[k], T, self.initial_qt[k], ql, 0.0)
+
+            #Nudging coefficients
+            if Gr.zl_half[k] <= 1200.0:
+                self.nudge_coeff_scalars[k] = 0.0
+            if 1200.0 < Gr.zl_half[k] <= 1500.0:
+                self.nudge_coeff_scalars[k] = (1/3600.0)*0.5*(1.0 - cos(pi * (Gr.zl_half[k] - 1200.0)/300.0))
+            if Gr.zl_half[k] > 1500.0:
+                self.nudge_coeff_scalars[k] = 1/3600.0
+
+            if Gr.zl_half[k] <= 825.0:
+                self.nudge_coeff_velocities[k] = (1/7200.0)*0.5*(1 - cos(pi*Gr.zl_half[k]/825.0))
+            if Gr.zl_half[k] > 825.0:
+                self.nudge_coeff_velocities[k] = 1/7200.0
         
         # **注册 NetCDF 输出变量**
         NS.add_profile('u_coriolis_tendency', Gr, Pa)
@@ -592,7 +637,28 @@ cdef class ForcingRico:
             apply_subsidence(&Gr.dims,&RS.rho0[0],&RS.rho0_half[0],&self.subsidence[0],&PV.values[u_shift],&PV.tendencies[u_shift])
             apply_subsidence(&Gr.dims,&RS.rho0[0],&RS.rho0_half[0],&self.subsidence[0],&PV.values[v_shift],&PV.tendencies[v_shift])
 
+        
+        cdef double[:] nudge_coeff_scalars_view = self.nudge_coeff_scalars
+        cdef double[:] initial_entropy_view = self.initial_entropy
+        cdef double[:] initial_qt_view = self.initial_qt
+        cdef double[:] nudge_coeff_velocities_view = self.nudge_coeff_velocities
+        cdef double[:] initial_u_view = self.initial_u
+        cdef double[:] initial_v_view = self.initial_v
+
+        
+        apply_nudging(&Gr.dims, &nudge_coeff_scalars_view[0], &initial_entropy_view[0], &PV.values[s_shift], &PV.tendencies[s_shift])
+        apply_nudging(&Gr.dims, &nudge_coeff_scalars_view[0], &initial_qt_view[0], &PV.values[qt_shift], &PV.tendencies[qt_shift])
+        apply_nudging(&Gr.dims, &nudge_coeff_velocities_view[0], &initial_u_view[0], &PV.values[u_shift], &PV.tendencies[u_shift])
+        apply_nudging(&Gr.dims, &nudge_coeff_velocities_view[0], &initial_v_view[0], &PV.values[v_shift], &PV.tendencies[v_shift])
+        
+
+        #apply_nudging(&Gr.dims,&self.nudge_coeff_scalars[0],&self.initial_entropy[0],&PV.values[s_shift],&PV.tendencies[s_shift])
+        #apply_nudging(&Gr.dims,&self.nudge_coeff_scalars[0],&self.initial_qt[0],&PV.values[qt_shift],&PV.tendencies[qt_shift])
+        #apply_nudging(&Gr.dims,&self.nudge_coeff_velocities[0],&self.initial_u[0],&PV.values[u_shift],&PV.tendencies[u_shift])
+        #apply_nudging(&Gr.dims,&self.nudge_coeff_velocities[0],&self.initial_v[0],&PV.values[v_shift],&PV.tendencies[v_shift])
+        
         #Apply large scale source terms
+        
         with nogil:
             for i in xrange(imin,imax):
                 ishift = i * istride
